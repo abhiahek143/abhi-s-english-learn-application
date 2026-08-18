@@ -39,7 +39,7 @@ def get_recent_conversation_turns(
     db: Session,
     user_id: str,
     mode: str,
-    limit: int = 8,
+    limit: int = 50,
 ) -> List[models.ConversationTurn]:
     rows = (
         db.query(models.ConversationTurn)

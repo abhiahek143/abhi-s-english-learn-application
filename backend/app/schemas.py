@@ -92,3 +92,19 @@ class RepeatResponse(BaseModel):
     transcript: str
     score: float
     feedback: str
+
+
+class ConversationTurnOut(BaseModel):
+    id: str
+    user_id: str
+    mode: str
+    role: str
+    content: str
+    timestamp: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ConversationResponse(BaseModel):
+    turns: List[ConversationTurnOut]

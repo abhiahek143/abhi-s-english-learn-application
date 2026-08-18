@@ -49,8 +49,8 @@ def correct_sentence(payload: schemas.CorrectRequest, db: Session = Depends(get_
 
     mode = payload.mode.strip() or "daily"
     try:
-        history = crud.get_recent_conversation_turns(db, payload.user_id, mode)
-        result = get_correction(payload.text, mode)
+        history = crud.get_recent_conversation_turns(db, payload.user_id, mode, limit=50)
+        result = get_correction(payload.text, mode, history)
         reply = get_conversation_reply(payload.text, mode, history)
     except CorrectionError as e:
         raise HTTPException(status_code=502, detail=str(e)) from e
@@ -125,6 +125,16 @@ def list_mistakes(user_id: str = Query(default="abhi"), db: Session = Depends(ge
 @app.get("/api/progress", response_model=schemas.ProgressResponse)
 def progress(user_id: str = Query(default="abhi"), db: Session = Depends(get_db)):
     return schemas.ProgressResponse(**crud.get_progress(db, user_id))
+
+
+@app.get("/api/conversation", response_model=schemas.ConversationResponse)
+def get_conversation(
+    user_id: str = Query(default="abhi"),
+    mode: str = Query(default="daily"),
+    db: Session = Depends(get_db),
+):
+    turns = crud.get_recent_conversation_turns(db, user_id=user_id, mode=mode, limit=50)
+    return schemas.ConversationResponse(turns=turns)
 
 
 @app.delete("/api/conversation")

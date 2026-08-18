@@ -7,8 +7,44 @@ const ERROR_TYPES = {
   grammar: { label: 'Grammar', color: '#C4453B' },
   tense: { label: 'Tense', color: '#B8763A' },
   vocabulary: { label: 'Vocabulary', color: '#7A5FB8' },
+  naturalness: { label: 'Real-world phrasing', color: '#2E8B57' },
+  idiom: { label: 'Native idiom', color: '#D97706' },
+  tone: { label: 'Tone & Politeness', color: '#2563EB' },
   pronunciation: { label: 'Pronunciation', color: '#3D7EA6' },
   other: { label: 'Other', color: '#6B6558' },
+};
+
+const MODE_DETAILS = {
+  daily: {
+    label: 'Daily conversation',
+    persona: 'Friendly Chat Partner',
+    desc: 'Casual chats about daily routines, hobbies, plans, and life with real-world conversational phrasing.',
+    starter: 'Try saying: "Hi! I just finished work and I was thinking about what to cook tonight."',
+  },
+  interview: {
+    label: 'Interview practice',
+    persona: 'Mock Hiring Manager',
+    desc: 'Job interview practice with structured STAR responses, executive presence, and recruiter-ready English.',
+    starter: 'Try saying: "Hello! I am excited to interview for this role today. I have 3 years of software engineering experience."',
+  },
+  office: {
+    label: 'Office English',
+    persona: 'Workplace Colleague',
+    desc: 'Standups, sprint updates, deadline discussions, polite requests, and business idioms.',
+    starter: 'Try saying: "Good morning team. Here is a quick update: I resolved the backend bug and pushed the changes for review."',
+  },
+  travel: {
+    label: 'Travel English',
+    persona: 'Travel Host / Agent',
+    desc: 'Airport, hotel check-in, ordering food, asking directions, and real-world travel scenarios.',
+    starter: 'Try saying: "Hello! I would like to check in for my flight to London, please."',
+  },
+  story: {
+    label: 'Storytelling practice',
+    persona: 'Narrative Co-Creator',
+    desc: 'Co-create an imaginative story step-by-step with vivid sensory details and exciting plot twists.',
+    starter: 'Try saying: "It was a dark and stormy night when Rahul heard a strange knock on his door."',
+  },
 };
 
 function uid() {
@@ -83,9 +119,44 @@ export default function App() {
     }
   };
 
+  const loadConversation = async (selectedMode) => {
+    try {
+      const res = await fetch(`/api/conversation?user_id=${USER_ID}&mode=${selectedMode}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.turns && data.turns.length > 0) {
+        const msgs = [];
+        for (let i = 0; i < data.turns.length; i++) {
+          const t = data.turns[i];
+          if (t.role === 'user') {
+            msgs.push({ id: t.id || uid(), role: 'user', text: t.content });
+          } else if (t.role === 'assistant') {
+            msgs.push({
+              id: t.id || uid(),
+              role: 'ai',
+              reply: t.content,
+              corrected: '',
+              mistakeList: [],
+              feedback: '',
+            });
+          }
+        }
+        setMessages(msgs);
+      } else {
+        setMessages([]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     loadMistakes();
   }, []);
+
+  useEffect(() => {
+    loadConversation(mode);
+  }, [mode]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -309,7 +380,14 @@ export default function App() {
     }
   };
 
-  const resetPractice = () => setMessages([]);
+  const resetPractice = async () => {
+    try {
+      await fetch(`/api/conversation?user_id=${USER_ID}&mode=${mode}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error(e);
+    }
+    setMessages([]);
+  };
 
   const clearMistakes = async () => {
     try {
@@ -340,6 +418,7 @@ export default function App() {
     return acc;
   }, {});
   const maxCount = Math.max(1, ...Object.values(errorCounts));
+  const modeInfo = MODE_DETAILS[mode] || MODE_DETAILS.daily;
 
   return (
     <div className="asl-root">
@@ -362,7 +441,10 @@ export default function App() {
         .asl-tab { border: none; background: transparent; color: var(--cream-text); opacity: 0.6; padding: 8px 14px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: 'Inter', sans-serif; transition: all 0.15s ease; }
         .asl-tab.active { background: var(--accent); color: #1A1206; opacity: 1; }
         .asl-body { flex: 1; display: flex; flex-direction: column; min-height: 0; padding: 18px 20px 20px; }
-        .asl-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; opacity: 0.55; gap: 10px; padding: 30px; }
+        .asl-mode-badge-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: rgba(22,35,58,0.7); border-radius: 8px; border: 1px solid rgba(242,239,230,0.06); font-size: 12px; margin-bottom: 6px; }
+        .asl-mode-badge { font-weight: 600; color: var(--accent); }
+        .asl-mode-context-hint { opacity: 0.65; font-size: 11.5px; }
+        .asl-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; padding: 24px; }
         .asl-chat { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding: 4px 2px 10px; }
         .asl-bubble-row { display: flex; }
         .asl-bubble-row.user { justify-content: flex-end; }
@@ -393,7 +475,7 @@ export default function App() {
         .asl-error-banner { background: var(--mistake-soft); color: #F0A199; border: 1px solid rgba(196,69,59,0.3); padding: 8px 12px; border-radius: 8px; font-size: 12.5px; margin-bottom: 10px; display: flex; gap: 6px; align-items: center; }
         .asl-dash { flex: 1; overflow-y: auto; }
         .asl-stat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .asl-stat-label { width: 90px; font-size: 12.5px; font-weight: 600; }
+        .asl-stat-label { width: 140px; font-size: 12.5px; font-weight: 600; }
         .asl-stat-bar-track { flex: 1; height: 10px; background: var(--bg-soft); border-radius: 6px; overflow: hidden; }
         .asl-stat-bar-fill { height: 100%; border-radius: 6px; }
         .asl-stat-count { width: 22px; text-align: right; font-family: 'IBM Plex Mono', monospace; font-size: 12px; opacity: 0.7; }
@@ -446,11 +528,22 @@ export default function App() {
             {!micSupported && (
               <div className="asl-error-banner"><AlertCircle size={14} /> Speech recognition isn't supported in this browser. Try Chrome on desktop or Android.</div>
             )}
+            
+            <div className="asl-mode-badge-bar">
+              <span className="asl-mode-badge">🎯 {modeInfo.persona} ({modeInfo.label})</span>
+              <span className="asl-mode-context-hint">{messages.length > 0 ? `Context memory: ${messages.length} messages` : 'Ready to start'}</span>
+            </div>
+
             {messages.length === 0 ? (
               <div className="asl-empty">
-                <Mic size={30} strokeWidth={1.3} />
-                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 17 }}>Tap the mic and say a sentence</div>
-                <div style={{ fontSize: 12.5, maxWidth: 260 }}>Speak naturally in English. Your coach will reply, then show a quick correction.</div>
+                <Mic size={32} strokeWidth={1.4} color="var(--accent)" />
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18 }}>{modeInfo.persona}</div>
+                <div style={{ fontSize: 13, maxWidth: 380, color: 'var(--cream-text)', opacity: 0.85, marginTop: 4, lineHeight: 1.4 }}>
+                  {modeInfo.desc}
+                </div>
+                <div style={{ fontSize: 12, background: 'rgba(232,163,61,0.12)', border: '1px solid rgba(232,163,61,0.25)', borderRadius: 8, padding: '8px 12px', maxWidth: 460, marginTop: 12, color: '#E8A33D', textAlign: 'center' }}>
+                  💡 {modeInfo.starter}
+                </div>
               </div>
             ) : (
               <div className="asl-chat">
@@ -490,7 +583,9 @@ export default function App() {
                           <div>
                             {m.mistakeList.map((mm, i) => (
                               <div key={i} style={{ marginTop: 6 }}>
-                                <span className="asl-mistake-chip">{ERROR_TYPES[mm.error_type]?.label || 'Other'}</span>
+                                <span className="asl-mistake-chip" style={{ background: `${ERROR_TYPES[mm.error_type]?.color || '#E8A33D'}22`, color: ERROR_TYPES[mm.error_type]?.color || '#A9670F' }}>
+                                  {ERROR_TYPES[mm.error_type]?.label || mm.error_type || 'Other'}
+                                </span>
                                 <span style={{ marginLeft: 8, fontSize: 12, color: 'var(--ink-soft)' }}>{mm.explanation}</span>
                               </div>
                             ))}
