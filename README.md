@@ -1,173 +1,271 @@
-# Abhi's Self Learn
+# Abhi's English Learn — AI Conversation Coach
 
+> A context-aware, voice-first AI English coaching app that behaves like a real person having a natural English conversation with you.
 
+![App Screenshot](image.png)
 
-![alt text](image.png)
+---
 
-# Abhi's Self Learn — Spoken English Practice Partner
+## What it does
 
-An opinionated, full-stack spoken-English practice application built to
-simulate a patient, helpful speaking partner. It transcribes your speech
-using Groq Whisper, corrects and coaches sentences with a Groq LLM, keeps
-recent conversation memory so replies stay on topic, and can speak back
-using Groq Orpheus (human-like voice) or the browser TTS fallback.
+Speak in English (or try to!) and the app acts as your personal English coach + conversation partner:
 
-This repo is suitable for demos, portfolio showcases, and early-stage
-technical interviews — it highlights integrations with modern LLM and
-speech APIs, a simple analytics pipeline for learning progress, and a
-clean React + FastAPI architecture.
+1. **Listens** to your voice via the microphone
+2. **Transcribes** your speech using Groq Whisper (highly accurate STT)
+3. **Corrects** your sentence — grammar, tense, vocabulary, and real-world phrasing (flags common Indian-English mistakes like "having a doubt", "today morning", "do the needful")
+4. **Replies** like a real person based on the active practice mode (friend, interviewer, coworker, etc.)
+5. **Remembers** the entire conversation (up to 50 turns) so replies are always context-aware
+6. **Speaks back** using Groq Orpheus (human-like voice) with browser TTS as fallback
 
-Highlights / demo-ready features
-- Accurate speech-to-text via Groq Whisper (`whisper-large-v3-turbo`).
-- Conversation memory: server-side recent-turns to keep replies coherent.
-- Practice modes: Daily, Interview, Office, Travel, Storytelling.
-- Mistake coaching: flagged phrases, one-line explanations, encouraging feedback.
-- Repeat-after-me: app plays corrected sentence, records your repeat, scores it.
-- Progress dashboard: speaking minutes, streaks, most-common mistake types.
-- Human voice via Groq Orpheus with a safe browser fallback.
+---
 
-Tech stack
-- Frontend: React + Vite, MediaRecorder API, browser SpeechSynthesis fallback.
-- Backend: FastAPI, SQLAlchemy + SQLite, requests-based Groq client.
-- Models/APIs used: Groq Whisper (STT), Groq LLMs (correction & conversation), Groq Orpheus (TTS).
-- Dev: Docker + docker-compose for easy local deployment.
+## Features
 
-Repository layout
+### 5 Practice Modes
+
+| Mode | Persona | What you practice |
+|---|---|---|
+| **Daily Conversation** | Friendly chat partner | Casual chats, plans, hobbies, daily life |
+| **Interview Practice** | Mock hiring manager | STAR answers, executive presence, recruiter-ready English |
+| **Office English** | Workplace colleague | Standups, status updates, polite requests, business idioms |
+| **Travel English** | Airport / hotel agent | Check-in, ordering food, directions, real travel scenarios |
+| **Storytelling** | Co-story creator | Vivid narrative, plot building, descriptive English |
+
+Each mode has a dedicated AI persona, system prompt, and coaching focus so corrections are always contextually appropriate.
+
+---
+
+### Context-Aware Conversation Memory
+
+- Full conversation history (up to 50 turns) is stored per user per mode in SQLite
+- Every AI correction and reply references what was said earlier in the conversation
+- Switching modes loads that mode's own separate conversation history
+- "Clear conversation" resets only the active mode's history
+
+---
+
+### Real-World English Coaching
+
+The correction engine goes beyond grammar — it coaches for natural, native-like phrasing:
+
+| Error type | Example |
+|---|---|
+| Grammar | "I am having" → "I have" |
+| Tense | "I was going yesterday morning" → "I went yesterday morning" |
+| Indianism | "today morning" → "this morning" |
+| Indianism | "having a doubt" → "have a question" |
+| Workplace | "do the needful" → "take care of this" |
+| Interview | "I passed out in 2024" → "I graduated in 2024" |
+| Travel | "Give water" → "Could I please have a glass of water?" |
+| Naturalness | Flags overly formal or unnatural phrasing |
+| Tone | Coaches politeness and formality level |
+
+Each mistake gets: flagged phrase, corrected phrase, error type badge, one-line coaching note, and an encouraging feedback message.
+
+---
+
+### Repeat-After-Me
+
+- Tap the Repeat button on any corrected sentence
+- App speaks the corrected sentence aloud
+- You record yourself repeating it
+- App transcribes your attempt and gives a similarity score + feedback
+
+---
+
+### Mistakes Dashboard
+
+- Bar chart of all mistake types (Grammar, Tense, Vocabulary, Naturalness, Idiom, Tone)
+- Full table of every flagged mistake with: what you said, correct version, type, and timestamp
+- One-click "Clear history" to reset
+
+---
+
+### Human Voice (Groq Orpheus TTS)
+
+- Uses `canopylabs/orpheus-v1-english` model (voice: hannah) for natural human-like replies
+- Automatically falls back to browser SpeechSynthesis if Orpheus terms are not accepted
+- "Enable human voice" button opens Groq Console to accept model terms
+
+---
+
+## Tech Stack
+
+```
+Frontend    React + Vite, MediaRecorder API, Lucide icons
+Backend     FastAPI (Python), Uvicorn
+Database    SQLAlchemy + SQLite (file-based, no setup needed)
+AI Models   Groq API:
+              - qwen/qwen3.6-27b          (correction + conversation)
+              - whisper-large-v3-turbo    (speech-to-text)
+              - canopylabs/orpheus-v1-english  (text-to-speech)
+Deployment  Docker + docker-compose
+```
+
+---
+
+## Project Structure
 
 ```
 abhis-self-learn/
-├── backend/          FastAPI + SQLite
-│   ├── app/          # main.py, llm.py, models.py, crud.py, schemas.py
+├── backend/
+│   ├── app/
+│   │   ├── main.py        # FastAPI routes + request handling
+│   │   ├── llm.py         # Groq API calls, personas, correction engine
+│   │   ├── crud.py        # Database read/write helpers
+│   │   ├── models.py      # SQLAlchemy table definitions
+│   │   ├── schemas.py     # Pydantic request/response schemas
+│   │   └── database.py    # DB engine + session setup
 │   ├── requirements.txt
-│   └── .env.example  # copy this to .env locally (do NOT commit .env)
-├── frontend/          # React + Vite app
-│   └── src/App.jsx    # main UI: mic, chat, dashboard
+│   ├── Dockerfile
+│   ├── .env               # Your local secrets (NOT committed)
+│   └── .env.example       # Template — copy this to .env
+├── frontend/
+│   ├── src/
+│   │   └── App.jsx        # Full UI: chat, mic, modes, dashboard
+│   ├── index.html
+│   ├── vite.config.js
+│   └── Dockerfile
 └── docker-compose.yml
 ```
 
-Quickstart — local development
+---
 
-1) Backend
+## API Reference
 
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/correct` | Transcript → correction, mistakes, AI reply |
+| `POST` | `/api/transcribe` | Raw audio → transcribed text (Groq Whisper) |
+| `POST` | `/api/speech` | Text → WAV audio (Groq Orpheus) |
+| `POST` | `/api/repeat` | Audio + expected text → similarity score + feedback |
+| `GET` | `/api/conversation` | Fetch conversation history for a mode |
+| `DELETE` | `/api/conversation` | Clear conversation for a mode |
+| `GET` | `/api/mistakes` | All logged mistakes + error type stats |
+| `DELETE` | `/api/mistakes` | Clear all logged mistakes |
+| `GET` | `/api/progress` | Practice stats: streaks, speaking time, mode counts |
+| `GET` | `/api/tts-status` | Check if Orpheus TTS is available |
+| `GET` | `/api/health` | Health check |
+
+### POST /api/correct — Request
+
+```json
+{
+  "text": "I am having a doubt about this.",
+  "user_id": "abhi",
+  "mode": "daily",
+  "duration_seconds": 4.2
+}
+```
+
+### POST /api/correct — Response
+
+```json
+{
+  "reply": "That's a great question! What exactly are you unsure about?",
+  "corrected": "I have a question about this.",
+  "mistakes": [
+    {
+      "incorrect_phrase": "having a doubt",
+      "corrected_phrase": "have a question",
+      "error_type": "idiom",
+      "explanation": "Native speakers say 'have a question', not 'having a doubt'."
+    }
+  ],
+  "feedback": "Nice effort — your sentence was clear and confident!",
+  "mode": "daily",
+  "repeat_prompt": "I have a question about this."
+}
+```
+
+---
+
+## Quickstart
+
+### Option 1 — Docker (recommended)
+
+```bash
+git clone https://github.com/abhiahek143/abhi-s-english-learn-application.git
+cd abhi-s-english-learn-application
+
+cp backend/.env.example backend/.env
+# Add your GROQ_API_KEY to backend/.env
+# Get a free key at https://console.groq.com/keys
+
+docker compose up --build
+```
+
+Open **http://localhost:8080** in your browser.
+
+---
+
+### Option 2 — Local Development
+
+**Backend:**
 ```bash
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# edit backend/.env and paste your GROQ_API_KEY (local only)
+# Add your GROQ_API_KEY to backend/.env
 uvicorn app.main:app --reload --port 8000
 ```
 
-2) Frontend (in a second terminal)
-
+**Frontend** (new terminal):
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173 — the frontend proxies `/api/*` to
-`http://localhost:8000` (development config).
+Open **http://localhost:5173**
 
-Docker (one-line)
+---
 
-```bash
-cp backend/.env.example backend/.env
-# edit backend/.env locally with your GROQ key
-docker compose up --build
-```
+## Environment Variables
 
-API overview (developer-friendly)
+| Variable | Default | Description |
+|---|---|---|
+| `GROQ_API_KEY` | required | Get from https://console.groq.com/keys |
+| `GROQ_CORRECTION_MODEL` | `qwen/qwen3.6-27b` | Model for correction |
+| `GROQ_CONVERSATION_MODEL` | `qwen/qwen3.6-27b` | Model for conversational replies |
+| `GROQ_STT_MODEL` | `whisper-large-v3-turbo` | Speech-to-text model |
+| `GROQ_TTS_MODEL` | `canopylabs/orpheus-v1-english` | Text-to-speech model |
+| `GROQ_TTS_VOICE` | `hannah` | Orpheus voice name |
+| `CORS_ORIGINS` | `http://localhost:5173` | Allowed frontend origins |
 
-- `POST /api/correct` — payload: `{ text, user_id, mode, duration_seconds }` → returns corrected sentence, mistakes array, conversational reply.
-- `POST /api/transcribe` — raw audio → returns `{ text }` from Groq Whisper.
-- `POST /api/repeat` — form file `file` + `expected` text → transcribes repeat and returns similarity `score` and short `feedback`.
-- `POST /api/speech` — `{ text, voice? }` → Groq Orpheus WAV (or error if not enabled).
-- `GET /api/mistakes` and `GET /api/progress` — dashboard data.
+**Never commit `backend/.env`** — it is in `.gitignore` by default.
 
-Security & secrets (very important)
+---
 
-- Do NOT commit `backend/.env` containing your `GROQ_API_KEY`. Use
-  `backend/.env.example` as the template.
-- The repo includes a `.gitignore` entry for `backend/.env`. If you
-  accidentally committed secrets, follow the README instructions to
-  remove them from history (git-filter-repo or BFG) before pushing.
-- For production, store the Groq API key in a secure secret store (GitHub
-  Secrets, environment variables in your host, or a secret manager).
+## Database Schema
 
-Why this is portfolio- and interview-ready
+| Table | Purpose |
+|---|---|
+| `conversation_turns` | All chat turns (user + assistant) per user per mode |
+| `mistakes_tracker` | Every flagged mistake with type and timestamp |
+| `practice_logs` | Each practice session with duration, mode, mistake count |
 
-- Integrates modern generative AI APIs end-to-end (speech → LLM → TTS).
-- Shows practical engineering: background workers, DB-backed user history,
-  and a reusable API surface (clearly defined Pydantic schemas).
-- Demonstrates UX thinking: friendly coaching messages, repeat practice,
-  and a progression dashboard useful for product discussions.
+SQLite file is at `backend/abhis_self_learn.db` — no database server needed.
 
-Contributing / next steps
+---
 
-- Add user accounts and per-user encryption for multi-user deployments.
-- Improve progress analytics (charts, per-error trends, personalized lessons).
-- Add E2E tests for audio upload + transcription flows.
+## Security Notes
 
-Contact / demo
-
-If you'd like, I can prepare a deployable Docker image and a short
-recorded demo to showcase the app to hiring managers. Tell me which
-platform you prefer (Heroku/GCP/AWS) and I will prepare deployment notes.
-
-
-## Preparing to publish to GitHub (don't leak secrets)
-
-Before you push this repository to GitHub, make sure your Groq API key is
-kept out of the commit history and that the repository does not contain
-`backend/.env` with the real secret. The project includes a safe example
-file at `backend/.env.example` which contains no secrets — copy that to
-`backend/.env` locally and paste your real key there.
-
-Recommended steps:
+- `backend/.env` is in `.gitignore` and will never be committed
+- Use GitHub Secrets or environment variables for production
+- If you accidentally committed `.env`, remove from history:
 
 ```bash
-# 1) Ensure local-only env is ignored
-echo 'backend/.env' >> .gitignore
-
-# 2) If you have not yet committed, initialize and push
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin <git-remote-url>
-git push -u origin main
-
-# 3) If you already committed backend/.env (dangerous): remove it from
-# the index and commit the removal before pushing
-git rm --cached backend/.env
-git commit -m "Remove local env from repo"
-git push
-```
-
-If `backend/.env` was already committed in earlier commits, remove it from
-history using one of these approaches (these rewrite history — be careful):
-
-- Using `git filter-repo` (recommended):
-
-```bash
-# install: pip install git-filter-repo
 git filter-repo --path backend/.env --invert-paths
 git push --force
 ```
 
-- Or using BFG Repo Cleaner:
+---
 
-```bash
-# install BFG (https://rtyley.github.io/bfg-repo-cleaner/)
-bfg --delete-files backend/.env
-git reflog expire --expire=now --all && git gc --prune=now --aggressive
-git push --force
-```
+## Built by
 
-Finally, store your GROQ_API_KEY securely in the target GitHub repo's
-Secrets (Settings → Secrets) and do not add it directly to the codebase.
+**Abhishek** — learning in public
 
-# abhi-s-english-learn-application
-# abhi-s-english-learn-application
+> This project demonstrates end-to-end AI integration: voice → STT → LLM correction + conversation → TTS, with a real database-backed memory system and 5 domain-specific coaching personas.
